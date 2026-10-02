@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EduGenie – Google Gemini Powered Learning Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon">✨</span>
+        <div class="logo-text">
+          <span class="brand-name">EduGenie</span>
+          <span class="brand-tag">AI Learning Assistant</span>
+        </div>
+      </div>
+      <div id="aiStatusBadge" class="ai-badge {% if ai_configured %}badge-live{% else %}badge-demo{% endif %}">
+        <span class="badge-dot"></span>
+        <span id="aiStatusText">{% if ai_configured %}Gemini Live ({{ model_name }}){% else %}Demo / Offline Mode{% endif %}</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-btn active" data-tab="tab-learn">
+        <span class="nav-icon">💡</span>
+        <span>Learning Hub</span>
+      </button>
+      <button class="nav-btn" data-tab="tab-quiz">
+        <span class="nav-icon">🎯</span>
+        <span>Quiz Arena</span>
+      </button>
+      <button class="nav-btn" data-tab="tab-path">
+        <span class="nav-icon">🗺️</span>
+        <span>Learning Paths</span>
+      </button>
+      <button class="nav-btn" data-tab="tab-notes">
+        <span class="nav-icon">📚</span>
+        <span>Notes & History</span>
+      </button>
+      <button class="nav-btn" data-tab="tab-analytics">
+        <span class="nav-icon">📊</span>
+        <span>Analytics</span>
+      </button>
+      <a href="/docs" target="_blank" class="nav-link-docs">
+        <span class="nav-icon">⚡</span>
+        <span>API Docs</span>
+      </a>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- Hero Banner -->
+    <section class="hero-banner">
+      <div class="hero-content">
+        <div class="hero-pill">Powered by Google Gemini 2.5 & FastAPI</div>
+        <h1 class="hero-title">Empower Your Learning with <span class="gradient-text">Generative AI</span></h1>
+        <p class="hero-subtitle">Ask questions, simplify concepts at any level, generate interactive quizzes with instant grading, summarize revision materials, and build personalized roadmaps.</p>
+      </div>
+    </section>
+
+    <!-- TAB 1: LEARNING HUB -->
+    <section id="tab-learn" class="tab-pane active">
+      <div class="workspace-grid">
+        <!-- Input Column -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2 class="panel-title">1. Select Learning Task</h2>
+          </div>
+
+          <!-- Task Selector Pills -->
+          <div class="task-selector">
+            <label class="task-pill active">
+              <input type="radio" name="learningTask" value="qa" checked>
+              <span class="pill-icon">❓</span>
+              <span class="pill-label">Ask a Question</span>
+            </label>
+            <label class="task-pill">
+              <input type="radio" name="learningTask" value="explain">
+              <span class="pill-icon">💡</span>
+              <span class="pill-label">Explain Concept</span>
+            </label>
+            <label class="task-pill">
+              <input type="radio" name="learningTask" value="summarize">
+              <span class="pill-icon">📝</span>
+              <span class="pill-label">Summarize Text</span>
+            </label>
+          </div>
+
+          <!-- Level Selector (Dynamic for Concept Explain) -->
+          <div id="levelSelectorContainer" class="form-group hidden">
+            <label for="learnerLevel" class="input-label">Learner Target Level</label>
+            <div class="select-wrapper">
+              <select id="learnerLevel" class="custom-select">
+                <option value="beginner">Beginner (Simple analogies & fundamentals)</option>
+                <option value="intermediate">Intermediate (Technical depth & logic)</option>
+                <option value="advanced">Advanced (Deep architectural breakdown)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Quick Suggestion Chips -->
+          <div class="prompt-chips-wrapper">
+            <span class="chips-label">Quick Suggestions:</span>
+            <div id="quickChips" class="chips-list">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- Input Textarea -->
+          <div class="form-group">
+            <div class="label-row">
+              <label for="hubInput" id="hubInputLabel" class="input-label">Your Question or Topic</label>
+              <span id="charCount" class="char-count">0 characters</span>
+            </div>
+            <div class="textarea-wrapper">
+              <textarea id="hubInput" rows="9" class="custom-textarea" placeholder="Type your academic question here..."></textarea>
+              <div class="textarea-actions">
+                <button type="button" id="voiceBtn" class="icon-tool-btn" title="Voice Dictation (Speech-to-Text)">
+                  🎤
+                </button>
+                <button type="button" id="clearInputBtn" class="icon-tool-btn" title="Clear text">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <button id="generateBtn" class="btn btn-primary btn-block">
+            <span class="btn-icon">⚡</span>
+            <span id="generateBtnText">Generate with AI</span>
+          </button>
+        </div>
+
+        <!-- Output Column -->
+        <div class="panel-card output-card">
+          <div class="panel-header">
+            <div class="output-title-wrapper">
+              <h2 class="panel-title">2. AI Generated Response</h2>
+              <span id="responseStatus" class="status-indicator">Ready</span>
+            </div>
+            <div class="output-actions">
+              <button id="speakBtn" class="btn-sm btn-outline" title="Listen with Text-to-Speech">
+                🔊 Listen
+              </button>
+              <button id="copyBtn" class="btn-sm btn-outline" title="Copy response to clipboard">
+                📋 Copy
+              </button>
+              <button id="bookmarkBtn" class="btn-sm btn-outline" title="Bookmark for quick review">
+                ⭐ Bookmark
+              </button>
+              <button id="saveNoteBtn" class="btn-sm btn-primary-light" title="Save into Study Notes">
+                💾 Save to Notes
+              </button>
+            </div>
+          </div>
+
+          <div id="responseContainer" class="response-body">
+            <div class="empty-state">
+              <div class="empty-icon">🧠</div>
+              <h3>EduGenie is ready to assist</h3>
+              <p>Pick a learning task, type a question or concept on the left, and click <strong>Generate with AI</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: QUIZ ARENA -->
+    <section id="tab-quiz" class="tab-pane">
+      <div class="quiz-layout">
+        <!-- Quiz Generation Form -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2 class="panel-title">🎯 Interactive Quiz Generator</h2>
+          </div>
+          <p class="panel-desc">Enter any topic or paste study notes to generate practice multiple-choice questions with instant scoring.</p>
+
+          <div class="form-group">
+            <label for="quizTopicInput" class="input-label">Quiz Topic or Passage</label>
+            <textarea id="quizTopicInput" rows="5" class="custom-textarea" placeholder="Example: Computer Networks, Python Data Structures, Photosynthesis, or paste an article..."></textarea>
+          </div>
+
+          <div class="prompt-chips-wrapper">
+            <span class="chips-label">Popular Topics:</span>
+            <div class="chips-list">
+              <button class="chip-btn" data-quiz-topic="Data Structures & Algorithms">Algorithms</button>
+              <button class="chip-btn" data-quiz-topic="Computer Networks & TCP/IP">Computer Networks</button>
+              <button class="chip-btn" data-quiz-topic="Database Management Systems & SQL">DBMS & SQL</button>
+              <button class="chip-btn" data-quiz-topic="Object Oriented Programming Principles">OOP Principles</button>
+            </div>
+          </div>
+
+          <button id="startQuizBtn" class="btn btn-primary btn-block">
+            <span>🎲 Generate Quiz</span>
+          </button>
+        </div>
+
+        <!-- Active Quiz Stage -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2 class="panel-title">Practice Questions</h2>
+            <div id="quizTimer" class="quiz-timer hidden">⏱️ <span id="timerCount">00:00</span></div>
+          </div>
+
+          <div id="quizStageContainer" class="quiz-stage">
+            <div class="empty-state">
+              <div class="empty-icon">📝</div>
+              <h3>No Active Quiz</h3>
+              <p>Generate a quiz using the form on the left to start testing your knowledge.</p>
+            </div>
+          </div>
+
+          <!-- Submission Controls -->
+          <div id="quizControls" class="quiz-controls hidden">
+            <button id="submitQuizBtn" class="btn btn-success btn-block">
+              <span>✅ Submit Quiz & See Score</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Past Quiz Performance Section -->
+      <div class="panel-card quiz-history-section">
+        <div class="panel-header">
+          <h2 class="panel-title">📊 Quiz Performance History</h2>
+          <button id="refreshQuizHistoryBtn" class="btn-sm btn-outline">🔄 Refresh</button>
+        </div>
+        <div id="quizHistoryContainer" class="table-responsive">
+          <p class="loading-text">Loading quiz records...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: LEARNING PATHS -->
+    <section id="tab-path" class="tab-pane">
+      <div class="workspace-grid">
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2 class="panel-title">🗺️ Build Personalized Learning Roadmap</h2>
+          </div>
+          <p class="panel-desc">Get a structured, week-by-week educational path with prerequisites, milestone projects, and revision strategies.</p>
+
+          <div class="form-group">
+            <label for="pathTopicInput" class="input-label">Subject or Career Skill</label>
+            <input type="text" id="pathTopicInput" class="custom-input" placeholder="Example: Full Stack Web Development, Machine Learning, Rust">
+          </div>
+
+          <div class="form-group">
+            <label for="pathLevelSelect" class="input-label">Current Proficiency Level</label>
+            <select id="pathLevelSelect" class="custom-select">
+              <option value="absolute beginner">Absolute Beginner (Never touched it)</option>
+              <option value="beginner">Beginner (Know basic syntax)</option>
+              <option value="intermediate">Intermediate (Built basic projects)</option>
+              <option value="advanced">Advanced (Targeting expert architecture)</option>
+            </select>
+          </div>
+
+          <div class="prompt-chips-wrapper">
+            <span class="chips-label">Popular Roadmaps:</span>
+            <div class="chips-list">
+              <button class="chip-btn" data-path-topic="Python Programming from Scratch">Python</button>
+              <button class="chip-btn" data-path-topic="Modern Web Development with React & Node.js">Full Stack Web</button>
+              <button class="chip-btn" data-path-topic="Machine Learning & Data Science">Machine Learning</button>
+              <button class="chip-btn" data-path-topic="System Design & Cloud Computing">System Design</button>
+            </div>
+          </div>
+
+          <button id="buildPathBtn" class="btn btn-primary btn-block">
+            <span>🚀 Create Learning Path</span>
+          </button>
+        </div>
+
+        <div class="panel-card output-card">
+          <div class="panel-header">
+            <h2 class="panel-title">Curated Roadmap</h2>
+            <div class="output-actions">
+              <button id="savePathNoteBtn" class="btn-sm btn-primary-light">💾 Save to Study Notes</button>
+              <button id="copyPathBtn" class="btn-sm btn-outline">📋 Copy Roadmap</button>
+            </div>
+          </div>
+          <div id="pathResultContainer" class="response-body">
+            <div class="empty-state">
+              <div class="empty-icon">🧭</div>
+              <h3>Your Roadmap Will Appear Here</h3>
+              <p>Select a subject and your level to generate a custom structured learning path.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: STUDY NOTES & HISTORY -->
+    <section id="tab-notes" class="tab-pane">
+      <div class="notes-layout">
+        <!-- Sub navigation for Notes & History -->
+        <div class="notes-toolbar">
+          <div class="toolbar-left">
+            <button class="sub-tab-btn active" data-subview="sub-history">📜 Activity History</button>
+            <button class="sub-tab-btn" data-subview="sub-bookmarks">⭐ Bookmarks</button>
+            <button class="sub-tab-btn" data-subview="sub-notes">📝 Study Notes</button>
+          </div>
+          <div class="toolbar-right">
+            <input type="text" id="historySearchInput" class="custom-input search-input" placeholder="🔍 Search past queries...">
+            <button id="newNoteModalBtn" class="btn-sm btn-primary">➕ New Note</button>
+            <button id="clearHistoryBtn" class="btn-sm btn-danger">🗑️ Clear History</button>
+          </div>
+        </div>
+
+        <!-- History Subview -->
+        <div id="sub-history" class="subview active">
+          <div class="filter-chips">
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="qa">Q&A</button>
+            <button class="filter-chip" data-filter="explain">Explanations</button>
+            <button class="filter-chip" data-filter="quiz">Quizzes</button>
+            <button class="filter-chip" data-filter="summarize">Summaries</button>
+            <button class="filter-chip" data-filter="learn">Learning Paths</button>
+          </div>
+          <div id="historyListContainer" class="history-grid">
+            <p class="loading-text">Loading learning history...</p>
+          </div>
+        </div>
+
+        <!-- Bookmarks Subview -->
+        <div id="sub-bookmarks" class="subview">
+          <div id="bookmarksListContainer" class="history-grid">
+            <p class="loading-text">Loading bookmarked items...</p>
+          </div>
+        </div>
+
+        <!-- Notes Subview -->
+        <div id="sub-notes" class="subview">
+          <div id="notesListContainer" class="notes-grid">
+            <p class="loading-text">Loading study notes...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: ANALYTICS -->
+    <section id="tab-analytics" class="tab-pane">
+      <div class="panel-card analytics-overview">
+        <div class="panel-header">
+          <h2 class="panel-title">📈 Learning Metrics & Progress Dashboard</h2>
+          <button id="refreshStatsBtn" class="btn-sm btn-outline">🔄 Refresh Stats</button>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-icon">💬</span>
+            <div class="stat-info">
+              <span id="statQueries" class="stat-value">0</span>
+              <span class="stat-title">AI Queries Made</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">🎯</span>
+            <div class="stat-info">
+              <span id="statQuizzes" class="stat-value">0</span>
+              <span class="stat-title">Quizzes Completed</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">⭐</span>
+            <div class="stat-info">
+              <span id="statScore" class="stat-value">0%</span>
+              <span class="stat-title">Avg. Quiz Score</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">📑</span>
+            <div class="stat-info">
+              <span id="statNotes" class="stat-value">0</span>
+              <span class="stat-title">Saved Notes & Bookmarks</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Distribution -->
+        <div class="breakdown-section">
+          <h3>Task Engagement Breakdown</h3>
+          <div id="taskBreakdownBars" class="breakdown-bars">
+            <!-- Dynamic task bars -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Note Creation Modal -->
+  <div id="noteModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create Study Note</h3>
+        <button id="closeNoteModalBtn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="input-label">Note Title</label>
+          <input type="text" id="modalNoteTitle" class="custom-input" placeholder="E.g., Key takeaways from Networking lecture">
+        </div>
+        <div class="form-group">
+          <label class="input-label">Category</label>
+          <input type="text" id="modalNoteCategory" class="custom-input" placeholder="E.g., Networking, Python, Algorithms" value="General">
+        </div>
+        <div class="form-group">
+          <label class="input-label">Note Content</label>
+          <textarea id="modalNoteContent" rows="8" class="custom-textarea" placeholder="Type or paste your study notes here..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelNoteBtn" class="btn btn-outline">Cancel</button>
+        <button id="saveNewNoteSubmitBtn" class="btn btn-primary">Save Note</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p><strong>EduGenie Learning Assistant</strong> &bull; Powered by Google Gemini AI & FastAPI &bull; Stored locally with SQLite</p>
+      <small>Built for students, developers, and educators. Always verify critical academic information.</small>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
